@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { fetchSearch } from "../api/tmdb";
 import { SearchResult } from "../types/types";
 import logoUrl from "../assets/greenLogo.png";
-import smallPoster from "../assets/posterLogoSmall.png";
+
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");

@@ -21,6 +21,7 @@ const RootLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" 
           crossOrigin="anonymous" 
         />
+        <meta name="google-site-verification" content="KwbrktzVgA87L-41bxaHEa1JBq9lrmiGKrqX1Fkv0O0" />
       </head>
       <body className={inter.className}>
         <Navbar />
