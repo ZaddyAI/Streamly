@@ -93,7 +93,7 @@ const Navbar = () => {
     <nav className="fixed top-5 left-1/2 transform -translate-x-1/2 bg-white/10 backdrop-blur-lg text-white py-2 px-6 rounded-full z-50 shadow-md flex items-center justify-between space-x-8 w-auto">
       {/* Logo */}
       <div className="flex items-center hover:text-green cursor-pointer">
-        <a href="https://streamly-zeta.vercel.app/">
+        <a href="/">
         <img src={logoUrl.src} alt="Logo" className="h-8 sm:w-20 w-12" />
         </a>
       </div>
@@ -117,7 +117,7 @@ const Navbar = () => {
           isMenuOpen ? "block" : "hidden"
         } absolute top-full left-0 w-full bg-mixed-100 text-white rounded-lg shadow-lg md:static md:bg-transparent md:flex space-y-4 md:space-y-0 md:space-x-6 text-sm font-medium p-4 md:p-0`}>
         <li className="hover:text-green cursor-pointer transition-colors duration-300">
-          <Link href="https://streamly-zeta.vercel.app/">Home</Link>
+          <Link href="/">Home</Link>
         </li>
         <li className="hover:text-green cursor-pointer transition-colors duration-300">
           <Link href="/movies">Movies</Link>
