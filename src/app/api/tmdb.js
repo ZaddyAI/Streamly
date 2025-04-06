@@ -44,7 +44,7 @@ export const fetchtrendingMovies = async () => {
 
 // Fetching All Movies
 export const fetchallMovies = async (page = 1) => {
-  const url = `${BASE_URL}/discover/movie?api_key=${API_KEY}&include_adult=true&include_video=true&language=en-US&page=${page}&sort_by=popularity.desc`;
+  const url = `${BASE_URL}/discover/movie?api_key=${API_KEY}&include_adult=false&include_video=true&language=en-US&page=${page}&sort_by=popularity.desc`;
 
   try {
     const response = await axios.get(url);
@@ -122,7 +122,7 @@ export const fetchMovieDetails = async (movieId) => {
 
 // Fetching All TV
 export const fetchallTVs = async (page = 1) => {
-  const url = `${BASE_URL}/trending/tv/week?api_key=${API_KEY}&include_adult=true&include_null_first_air_dates=false&language=en-US&page=${page}`;
+  const url = `${BASE_URL}/trending/tv/week?api_key=${API_KEY}&include_adult=false&include_null_first_air_dates=false&language=en-US&page=${page}`;
 
   try {
     const response = await axios.get(url);
@@ -231,7 +231,7 @@ export const fetchSearch = async (query, page = 1) => {
     const response = await axios.get(`${BASE_URL}/search/multi`, {
       params: {
         query: query,
-        include_adult: true,
+        include_adult: false,
         api_key: API_KEY,
         language: "en-US",
         page: page,
