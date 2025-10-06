@@ -31,33 +31,31 @@ const SERVERS = [
     },
     {
         id: 4,
-        name: "MultiEmbed",
-        getURL: (type: string, id: string, season?: string, episode?: string) =>
-            `https://multiembed.mov/?video_id=${id}${season && episode ? `&s=${season}&e=${episode}` : ""}`,
-    },
-    {
-        id: 5,
-        name: "Movies Club",
-        getURL: (type: string, id: string, season?: string, episode?: string) =>
-            `https://moviesapi.club/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `-${season}-${episode}` : ""}`,
-    },
-    {
-        id: 6,
         name: "VidSrc XYZ",
         getURL: (type: string, id: string, season?: string, episode?: string) =>
             `https://vidsrc.xyz/embed/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `/${season}-${episode}` : ""}`,
     },
     {
-        id: 7,
-        name: "2Embed",
+        id: 5,
+        name: "VidSrc CC",
         getURL: (type: string, id: string, season?: string, episode?: string) =>
-            `https://www.2embed.cc/embed/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `&s=${season}&e=${episode}` : ""}`,
+            `https://vidsrc.cc/v2/embed/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `?s=${season}&e=${episode}` : ""}`,
     },
     {
-        id: 8,
-        name: "Smashy Stream",
+        id: 6,
+        name: "VidLink Pro",
+        getURL: (type: string, id: string, season?: string, episode?: string) => {
+            if (type === "tv" && season && episode) {
+                return `https://vidlink.pro/tv/${id}/${season}/${episode}`
+            }
+            return `https://vidlink.pro/${type === "tv" ? "tv" : "movie"}/${id}`
+        },
+    },
+    {
+        id: 7,
+        name: "VidSrc Me",
         getURL: (type: string, id: string, season?: string, episode?: string) =>
-            `https://player.smashy.stream/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `?s=${season}&e=${episode}` : ""}`,
+            `https://vidsrc.me/embed/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `/${season}/${episode}` : ""}`,
     },
 ]
 
@@ -141,6 +139,7 @@ export default function WatchPage() {
                         )}
                     </div>
 
+                    {/* Season & Episode Selectors only for TV */}
                     {type === "tv" && tvShowData && (
                         <div className="mt-6 space-y-4">
                             <div className="flex flex-col sm:flex-row gap-4">
