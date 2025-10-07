@@ -10,6 +10,7 @@ import {
     getTrendingTVShows,
     getPopularTVShows,
 } from "@/lib/tmdb"
+import { Footer } from "@/components/footer"
 
 export default async function HomePage() {
     const [trending, popular, topRated, nowPlaying, upcoming, trendingTV, popularTV] = await Promise.all([
@@ -22,20 +23,19 @@ export default async function HomePage() {
         getPopularTVShows(),
     ])
 
-    // Use the first trending movie as hero
-    const heroMovie = trending[0]
+    const heroMovies = trending.slice(0, 5)
 
     return (
         <div className="min-h-screen">
             <Header />
 
             {/* Hero Section */}
-            {heroMovie && <HeroSection movie={heroMovie} />}
+            {heroMovies.length > 0 && <HeroSection movies={heroMovies} />}
 
             {/* Movie Rows */}
             <div className="space-y-8 md:space-y-12 pb-12 -mt-32 relative z-10">
                 <MovieRow title="Trending Now" movies={trending} />
-                <MovieRow title="Popular on STREAMLY" movies={popular} />
+                <MovieRow title="Popular on SFLIX" movies={popular} />
                 <MovieRow
                     title="Trending TV Shows"
                     movies={trendingTV.map((show: any) => ({ ...show, title: show.name, release_date: show.first_air_date }))}
@@ -50,6 +50,8 @@ export default async function HomePage() {
                 <MovieRow title="Now Playing" movies={nowPlaying} />
                 <MovieRow title="Coming Soon" movies={upcoming} />
             </div>
+
+            <Footer />
         </div>
     )
 }

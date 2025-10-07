@@ -7,7 +7,7 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-    title: "Streamly",
+    title: "Streamly - Stream Movies & TV Shows",
     description: "Watch unlimited movies and TV shows online",
     generator: "Gambhir Poudel",
 }

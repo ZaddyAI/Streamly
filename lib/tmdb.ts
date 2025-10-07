@@ -80,6 +80,15 @@ export interface Genre {
   name: string;
 }
 
+export interface Video {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+}
+
 // Image URL helpers
 export const getImageUrl = (
   path: string | null,
@@ -192,9 +201,9 @@ export async function getPopularTVShows(): Promise<TVShow[]> {
   return data.results;
 }
 
-export async function getTopRatedTVShows(): Promise<TVShow[]> {
-  const data = await tmdbFetch<{ results: TVShow[] }>("/tv/top_rated");
-  return data.results;
+export async function getTopRatedTVShows(): Promise<TVShow[]>{
+    const data = await tmdbFetch<{ results: TVShow[] }>("/tv/top_rated");
+    return data.results;
 }
 
 export async function getTVShowDetails(id: number): Promise<TVShowDetails> {
@@ -229,4 +238,16 @@ export async function searchMulti(query: string): Promise<(Movie | TVShow)[]> {
   return data.results.filter(
     (item: any) => item.media_type === "movie" || item.media_type === "tv"
   );
+}
+
+// Fetch movie videos/trailers
+export async function getMovieVideos(id: number): Promise<Video[]> {
+  const data = await tmdbFetch<{ results: Video[] }>(`/movie/${id}/videos`);
+  return data.results.filter((video) => video.site === "YouTube");
+}
+
+// Fetch TV show videos/trailers
+export async function getTVShowVideos(id: number): Promise<Video[]> {
+  const data = await tmdbFetch<{ results: Video[] }>(`/tv/${id}/videos`);
+  return data.results.filter((video) => video.site === "YouTube");
 }

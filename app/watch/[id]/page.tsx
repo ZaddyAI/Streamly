@@ -3,12 +3,14 @@
 import { Header } from "@/components/header"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Server } from "lucide-react"
+import { ArrowLeft, Server, Monitor } from "lucide-react"
 import Link from "next/link"
 import { useParams, useSearchParams } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getSeasonDetails, getTVShowDetails } from "@/lib/tmdb"
 import type { Episode, TVShowDetails } from "@/lib/tmdb"
+import { Footer } from "@/components/footer"
+
 
 const SERVERS = [
     {
@@ -57,6 +59,18 @@ const SERVERS = [
         getURL: (type: string, id: string, season?: string, episode?: string) =>
             `https://vidsrc.me/embed/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `/${season}/${episode}` : ""}`,
     },
+    //     {
+    //         id: 8,
+    //         name: "2Embed",
+    //         getURL: (type: string, id: string, season?: string, episode?: string) =>
+    //             `https://www.2embed.cc/embed/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `&s=${season}&e=${episode}` : ""}`,
+    //     },
+    //     {
+    //         id: 9,
+    //         name: "Smashy Stream",
+    //         getURL: (type: string, id: string, season?: string, episode?: string) =>
+    //             `https://player.smashy.stream/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `?s=${season}&e=${episode}` : ""}`,
+    //     },
 ]
 
 export default function WatchPage() {
@@ -106,10 +120,10 @@ export default function WatchPage() {
     )
 
     return (
-        <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-black flex flex-col">
             <Header />
 
-            <div className="pt-16">
+            <div className="pt-16 flex-1">
                 {/* Back Button */}
                 <div className="container mx-auto px-4 py-4">
                     <Button asChild variant="ghost" className="gap-2">
@@ -120,12 +134,14 @@ export default function WatchPage() {
                     </Button>
                 </div>
 
-                {/* Video Player */}
                 <div className="container mx-auto px-4">
-                    <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+                    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-border">
                         {loading ? (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                            <div className="absolute inset-0 flex items-center justify-center bg-secondary/20">
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                                    <p className="text-sm text-muted-foreground">Loading player...</p>
+                                </div>
                             </div>
                         ) : (
                             <iframe
@@ -139,7 +155,6 @@ export default function WatchPage() {
                         )}
                     </div>
 
-                    {/* Season & Episode Selectors only for TV */}
                     {type === "tv" && tvShowData && (
                         <div className="mt-6 space-y-4">
                             <div className="flex flex-col sm:flex-row gap-4">
@@ -147,7 +162,7 @@ export default function WatchPage() {
                                 <div className="flex-1">
                                     <label className="text-sm text-muted-foreground mb-2 block">Season</label>
                                     <Select value={currentSeason} onValueChange={setCurrentSeason}>
-                                        <SelectTrigger className="w-full">
+                                        <SelectTrigger className="w-full bg-secondary">
                                             <SelectValue placeholder="Select season" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -166,7 +181,7 @@ export default function WatchPage() {
                                 <div className="flex-1">
                                     <label className="text-sm text-muted-foreground mb-2 block">Episode</label>
                                     <Select value={currentEpisode} onValueChange={setCurrentEpisode}>
-                                        <SelectTrigger className="w-full">
+                                        <SelectTrigger className="w-full bg-secondary">
                                             <SelectValue placeholder="Select episode" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -182,32 +197,34 @@ export default function WatchPage() {
                         </div>
                     )}
 
-                    {/* Server Selection */}
-                    <div className="mt-6 space-y-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Server className="h-4 w-4" />
-                            <span>Select Server:</span>
+                    <div className="mt-8 space-y-4 bg-secondary/30 rounded-xl p-6 border border-border">
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                            <Monitor className="h-5 w-5 text-primary" />
+                            <span>Available Servers</span>
                         </div>
 
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {SERVERS.map((server) => (
                                 <Button
                                     key={server.id}
                                     variant={selectedServer.id === server.id ? "default" : "secondary"}
                                     onClick={() => setSelectedServer(server)}
-                                    className="min-w-24"
+                                    className="w-full gap-2 h-auto py-3"
                                 >
-                                    {server.name}
+                                    <Server className="h-4 w-4" />
+                                    <span className="text-xs sm:text-sm">{server.name}</span>
                                 </Button>
                             ))}
                         </div>
 
-                        <p className="text-xs text-muted-foreground">
-                            If the current server doesn&apos;t work, please try another server.
+                        <p className="text-xs text-muted-foreground text-center pt-2">
+                            If the current server doesn&apos;t work, please try another server from the options above.
                         </p>
                     </div>
                 </div>
             </div>
+
+            <Footer />
         </div>
     )
 }
