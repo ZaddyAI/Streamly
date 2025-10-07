@@ -15,10 +15,10 @@ Welcome to **Streamly**, your premier ad-free streaming platform for movies and 
 
 Here are some images and screenshots showcasing Streamly's features:
 
-![Streamly Homepage](./screenshots/homepage.png)  
+![Streamly Homepage](./screenshots/homepage.png)
 *Homepage*
 
-![Movies ](./screenshots/movies.png)  
+![Movies ](./screenshots/movies.png)
 *Movies*
 
 ![TvShows ](./screenshots/tv.png)
@@ -27,13 +27,7 @@ Here are some images and screenshots showcasing Streamly's features:
 ![Details ](./screenshots/details.png)
 *Details*
 
-![Season ](./screenshots/season.png)
-*Seasons*
-
-![Episodes ](./screenshots/episodes.png)
-*Episodes*
-
-![Movie Playback](./screenshots/player.png)  
+![Movie Playback](./screenshots/player.png)
 *Watch content with the option to select from multiple streaming servers.*
 
 ## How It Works

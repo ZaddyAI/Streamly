@@ -35,7 +35,7 @@ export default async function HomePage() {
             {/* Movie Rows */}
             <div className="space-y-8 md:space-y-12 pb-12 -mt-32 relative z-10">
                 <MovieRow title="Trending Now" movies={trending} />
-                <MovieRow title="Popular on SFLIX" movies={popular} />
+                <MovieRow title="Popular on Streamly" movies={popular} />
                 <MovieRow
                     title="Trending TV Shows"
                     movies={trendingTV.map((show: any) => ({ ...show, title: show.name, release_date: show.first_air_date }))}
