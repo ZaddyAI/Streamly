@@ -111,7 +111,7 @@ export function Footer() {
                         </a>
                     </p>
                     {/* GitHub Stats Centered */}
-                    <div className="flex justify-center items-center gap-4 mt-6 text-sm text-muted-foreground">
+                    {/* <div className="flex justify-center items-center gap-4 mt-6 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                             <div className="w-5 h-5">
                                 <IconFork />
@@ -124,7 +124,7 @@ export function Footer() {
                             </div>
                             <span>{star !== null ? star : "..."}</span>
                         </div>
-                    </div>
+                    </div> */}
 
 
                 </div>
