@@ -1,8 +1,7 @@
 "use client";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import IconFork from "./fork";
-import IconStar from "./star";
+
 
 export function Footer() {
     const [forkStars, setForkStars] = useState<number | null>(null);
