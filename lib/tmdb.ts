@@ -1,7 +1,7 @@
 // TMDB API configuration and helper functions
 
-const TMDB_API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || ""; // User will need to add this
-const TMDB_BASE_URL = "https://api.themoviedb.org/3";
+const TMDB_API_KEY = (process.env.NEXT_PUBLIC_TMDB_API_KEY || "").trim();
+const TMDB_BASE_URL = (process.env.NEXT_PUBLIC_TMDB_BASE_URL || "https://api.themoviedb.org/3").trim();
 const TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p";
 
 export interface Movie {
@@ -94,7 +94,7 @@ export const getImageUrl = (
   path: string | null,
   size: "w500" | "w780" | "original" = "w500"
 ) => {
-  if (!path) return "/posterLogoLarge.png";
+  if (!path) return "/placeholder.svg";
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 };
 
@@ -102,15 +102,14 @@ export const getBackdropUrl = (
   path: string | null,
   size: "w780" | "w1280" | "original" = "w1280"
 ) => {
-  if (!path) return "/posterLogoLarge.png";
+  if (!path) return "/placeholder-landscape.svg";
   return `${TMDB_IMAGE_BASE_URL}/${size}${path}`;
 };
 
 // API fetch helper
 async function tmdbFetch<T>(endpoint: string): Promise<T> {
-  const url = `${TMDB_BASE_URL}${endpoint}${
-    endpoint.includes("?") ? "&" : "?"
-  }api_key=${TMDB_API_KEY}`;
+  const url = `${TMDB_BASE_URL}${endpoint}${endpoint.includes("?") ? "&" : "?"
+    }api_key=${TMDB_API_KEY}`;
   const response = await fetch(url, { next: { revalidate: 3600 } });
 
   if (!response.ok) {
@@ -201,9 +200,9 @@ export async function getPopularTVShows(): Promise<TVShow[]> {
   return data.results;
 }
 
-export async function getTopRatedTVShows(): Promise<TVShow[]>{
-    const data = await tmdbFetch<{ results: TVShow[] }>("/tv/top_rated");
-    return data.results;
+export async function getTopRatedTVShows(): Promise<TVShow[]> {
+  const data = await tmdbFetch<{ results: TVShow[] }>("/tv/top_rated");
+  return data.results;
 }
 
 export async function getTVShowDetails(id: number): Promise<TVShowDetails> {

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="100%" height="100%">
+  <defs>
+    <!-- Midnight background gradient -->
+    <linearGradient id="bgGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090D18" />
+      <stop offset="50%" stop-color="#101522" />
+      <stop offset="100%" stop-color="#05070D" />
+    </linearGradient>
+
+    <!-- Subtle violet ambient glow -->
+    <radialGradient id="glowL" cx="50%" cy="45%" r="45%">
+      <stop offset="0%" stop-color="#9165FF" stop-opacity="0.28" />
+      <stop offset="60%" stop-color="#9165FF" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#9165FF" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Streamly brand tile gradient -->
+    <linearGradient id="brandTileL" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7B46F6" />
+      <stop offset="50%" stop-color="#9165FF" />
+      <stop offset="100%" stop-color="#B69AFF" />
+    </linearGradient>
+
+    <filter id="tileShadowL" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#9165FF" flood-opacity="0.45" />
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1280" height="720" fill="url(#bgGradL)" />
+  <rect width="1280" height="720" fill="url(#glowL)" />
+
+  <!-- Subtle grid lines -->
+  <g stroke="rgba(255,255,255,0.03)" stroke-width="1">
+    <line x1="0" y1="360" x2="1280" y2="360" />
+    <line x1="640" y1="0" x2="640" y2="720" />
+  </g>
+
+  <!-- Centered Logo Group -->
+  <g transform="translate(640, 320)">
+    <!-- Streamly Brand Tile -->
+    <rect x="-56" y="-56" width="112" height="112" rx="28" fill="url(#brandTileL)" filter="url(#tileShadowL)" />
+    <rect x="-55" y="-55" width="110" height="110" rx="27" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2" />
+    
+    <!-- White Play Triangle -->
+    <path d="M-12 -26 L29 0 L-12 26 Z" fill="#FFFFFF" />
+
+    <!-- Streamly Wordmark -->
+    <g transform="translate(0, 105)">
+      <text text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="800" font-size="38" fill="#F7F7FC" letter-spacing="-1">
+        Stream<tspan fill="#B69AFF">ly</tspan>
+      </text>
+      <circle cx="92" cy="-6" r="4.5" fill="#9165FF" />
+    </g>
+
+    <!-- Subtitle text -->
+    <text y="145" text-anchor="middle" font-family="'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="500" font-size="14" fill="#929BB0" letter-spacing="1">
+      CINEMATIC STREAMING
+    </text>
+  </g>
+
+  <rect x="1" y="1" width="1278" height="718" rx="16" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="2" />
+</svg>

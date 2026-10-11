@@ -1,24 +1,23 @@
-import { Header } from "@/components/header"
-
 export default function TVShowLoading() {
     return (
-        <div className="min-h-screen">
-            <Header />
+        <div className="space-y-8 md:space-y-10">
+            <div className="relative h-[280px] md:h-[360px] w-full rounded-3xl bg-white/5 animate-pulse" />
 
-            <div className="relative h-[60vh] md:h-[70vh] w-full bg-secondary animate-pulse" />
+            <div className="relative -mt-32 md:-mt-40 z-10 flex flex-col md:flex-row gap-8">
+                <div className="flex-none w-44 md:w-64 mx-auto md:mx-0">
+                    <div className="aspect-[2/3] rounded-2xl bg-white/5 animate-pulse" />
+                </div>
 
-            <div className="relative -mt-48 z-10">
-                <div className="container mx-auto px-4 md:px-8">
-                    <div className="flex flex-col md:flex-row gap-8">
-                        <div className="flex-none w-48 md:w-64">
-                            <div className="aspect-[2/3] rounded-lg bg-secondary animate-pulse" />
-                        </div>
-
-                        <div className="flex-1 space-y-6">
-                            <div className="h-12 w-3/4 bg-secondary animate-pulse rounded" />
-                            <div className="h-6 w-1/2 bg-secondary animate-pulse rounded" />
-                            <div className="h-24 w-full bg-secondary animate-pulse rounded" />
-                        </div>
+                <div className="flex-1 space-y-6">
+                    <div className="h-6 w-40 bg-white/5 animate-pulse rounded-full" />
+                    <div className="h-12 w-3/4 bg-white/5 animate-pulse rounded-xl" />
+                    <div className="h-6 w-1/2 bg-white/5 animate-pulse rounded-xl" />
+                    <div className="h-32 w-full bg-white/5 animate-pulse rounded-2xl" />
+                    <div className="h-11 w-48 bg-brand-accent/40 animate-pulse rounded-xl" />
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className="aspect-[2/3] bg-white/5 animate-pulse rounded-2xl" />
+                        ))}
                     </div>
                 </div>
             </div>
