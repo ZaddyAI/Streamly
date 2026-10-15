@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
     ArrowLeft,
     Server,
@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getSeasonDetails, getTVShowDetails, getMovieDetails, getImageUrl } from "@/lib/tmdb"
 import type { Episode, TVShowDetails, Movie } from "@/lib/tmdb"
 import { cn } from "@/lib/utils"
+import { upsertContinueWatchingEntry } from "@/lib/continue-watching"
 import { SafeImage } from "@/components/safe-image"
 
 interface ServerConfig {
@@ -403,6 +404,111 @@ export default function WatchPage() {
         type === "tv" ? tvShowData?.poster_path : movieData?.poster_path
     const rating =
         type === "tv" ? tvShowData?.vote_average : movieData?.vote_average
+
+    // ---- Continue Watching: persist progress + metadata ----
+    const playerProgressRef = useRef({ currentTime: 0, duration: 0 })
+    const saveProgressRef = useRef<(() => void) | null>(null)
+
+    const saveWatchProgress = useCallback(() => {
+        if (!id || !mediaTitle) return
+
+        const isTV = type === "tv"
+        const season = isTV ? Number(currentSeason) : undefined
+        const episode = isTV ? Number(currentEpisode) : undefined
+
+        // Estimated total runtime (seconds) as a fallback when the player
+        // doesn't report a duration via postMessage
+        let runtimeMinutes = 0
+        if (isTV) {
+            const currentEp = episodes.find(
+                (e) => e.season_number === season && e.episode_number === episode,
+            )
+            runtimeMinutes =
+                Number((currentEp as any)?.runtime) ||
+                Number(tvShowData?.episode_run_time?.[0]) ||
+                0
+        } else {
+            runtimeMinutes = Number((movieData as any)?.runtime) || 0
+        }
+
+        const player = playerProgressRef.current
+        const duration = player.duration > 0 ? player.duration : runtimeMinutes * 60
+        const currentTime =
+            duration > 0
+                ? Math.min(Math.max(player.currentTime, 0), duration)
+                : Math.max(player.currentTime, 0)
+
+        upsertContinueWatchingEntry({
+            id: Number(id),
+            type: isTV ? "tv" : "movie",
+            title: mediaTitle,
+            poster_path: posterPath,
+            backdrop_path: isTV ? tvShowData?.backdrop_path : movieData?.backdrop_path,
+            season,
+            episode,
+            currentTime,
+            duration,
+        })
+    }, [id, type, currentSeason, currentEpisode, mediaTitle, posterPath, tvShowData, movieData, episodes])
+
+    // Reset tracked player time whenever the loaded media changes
+    // (server / season / episode switch)
+    useEffect(() => {
+        playerProgressRef.current = { currentTime: 0, duration: 0 }
+    }, [iframeKey])
+
+    // Save an initial entry as soon as metadata is available so the title
+    // shows up in Continue Watching even if the embed reports no playback time
+    useEffect(() => {
+        saveProgressRef.current = saveWatchProgress
+        saveWatchProgress()
+    }, [saveWatchProgress])
+
+    // Track playback position reported by embeds that support postMessage
+    // (VidFast, VidKing, Smashy, VidLink...). Cross-origin iframes can't be
+    // polled directly, so this is the only way to capture currentTime.
+    useEffect(() => {
+        let lastSavedAt = 0
+
+        const handleMessage = (event: MessageEvent) => {
+            const data = event.data
+            if (!data || typeof data !== "object") return
+
+            const msg = data as Record<string, any>
+            const payload = msg.data && typeof msg.data === "object" ? msg.data : msg
+
+            const currentTime = Number(payload.currentTime ?? payload.position ?? payload.time)
+            const duration = Number(payload.duration ?? payload.totalTime ?? payload.length)
+            if (!Number.isFinite(currentTime) || currentTime <= 0) return
+
+            const player = playerProgressRef.current
+            player.currentTime = currentTime
+            if (Number.isFinite(duration) && duration > 0) {
+                player.duration = duration
+            }
+
+            // Throttle persistence to once every 5 seconds
+            const now = Date.now()
+            if (now - lastSavedAt >= 5000) {
+                lastSavedAt = now
+                saveProgressRef.current?.()
+            }
+        }
+
+        // Flush the latest position when leaving the page or backgrounding
+        const handleFlush = () => saveProgressRef.current?.()
+
+        window.addEventListener("message", handleMessage)
+        window.addEventListener("pagehide", handleFlush)
+        document.addEventListener("visibilitychange", handleFlush)
+
+        return () => {
+            window.removeEventListener("message", handleMessage)
+            window.removeEventListener("pagehide", handleFlush)
+            document.removeEventListener("visibilitychange", handleFlush)
+        }
+    }, [])
+
 
     return (
         <div className="flex flex-col flex-1 space-y-6">

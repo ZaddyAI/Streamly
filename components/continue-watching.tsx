@@ -1,11 +1,16 @@
+"use client"
+
 import Link from "next/link"
 import { PlayIcon, Clock } from "@/components/icons"
 import { getBackdropUrl } from "@/lib/tmdb"
 import { SafeImage } from "@/components/safe-image"
+import { useContinueWatching } from "@/hooks/use-continue-watching"
+import { formatRemainingTime } from "@/lib/continue-watching"
 import type { Movie, TVShow } from "@/lib/tmdb"
 
 export interface ContinueWatchingItem {
     id: number
+    key?: string
     title: string
     subtitle: string
     backdrop_path: string | null
@@ -22,35 +27,64 @@ interface ContinueWatchingProps {
 }
 
 export function ContinueWatching({ items, featuredMovies }: ContinueWatchingProps) {
-    // If no dynamic items passed, generate realistic items from featured movies
-    const validMovies = (featuredMovies || []).filter((m): m is Movie => Boolean(m && m.id))
-    const displayItems: ContinueWatchingItem[] =
-        items && items.length > 0
-            ? items
-            : validMovies.slice(0, 4).map((m, idx) => {
-                const progressVals = [68, 42, 85, 25]
-                const remainingVals = ["32m left", "48m left", "14m left", "1h 10m left"]
-                const subtitles = [
-                    "Season 2 · Episode 4",
-                    "4K Ultra HD",
-                    "Season 1 · Episode 7",
-                    "Cinematic Edition",
-                ]
+    const { items: savedEntries } = useContinueWatching()
 
-                return {
-                    id: m.id,
-                    title: m.title || (m as any).name || "Untitled",
-                    subtitle: subtitles[idx % subtitles.length],
-                    backdrop_path: m.backdrop_path,
-                    progress: progressVals[idx % progressVals.length],
-                    remainingTime: remainingVals[idx % remainingVals.length],
-                    type: idx % 2 === 0 ? "tv" : "movie",
-                    season: idx % 2 === 0 ? (idx === 0 ? 2 : 1) : undefined,
-                    episode: idx % 2 === 0 ? (idx === 0 ? 4 : 7) : undefined,
-                }
-            })
+    // 1. Real watch history saved on the watch page
+    const realItems: ContinueWatchingItem[] = savedEntries.map((entry) => ({
+        id: entry.id,
+        key: `${entry.type}-${entry.id}`,
+        title: entry.title,
+        subtitle:
+            entry.type === "tv" && entry.season && entry.episode
+                ? `Season ${entry.season} · Episode ${entry.episode}`
+                : "Movie",
+        backdrop_path: entry.backdrop_path,
+        progress: entry.progress,
+        remainingTime: formatRemainingTime(entry.currentTime, entry.duration),
+        type: entry.type,
+        season: entry.season,
+        episode: entry.episode,
+    }))
+
+    // 2. Explicitly passed items (e.g. stories/tests)
+    const passedItems: ContinueWatchingItem[] = (items || []).map((item) => ({
+        ...item,
+        key: item.key || `${item.type}-${item.id}`,
+    }))
+
+    // 3. Fallback: generate realistic items from featured movies
+    const validMovies = (featuredMovies || []).filter((m): m is Movie => Boolean(m && m.id))
+    const fallbackItems: ContinueWatchingItem[] = validMovies.slice(0, 4).map((m, idx) => {
+        const progressVals = [68, 42, 85, 25]
+        const remainingVals = ["32m left", "48m left", "14m left", "1h 10m left"]
+        const subtitles = [
+            "Season 2 · Episode 4",
+            "4K Ultra HD",
+            "Season 1 · Episode 7",
+            "Cinematic Edition",
+        ]
+
+        return {
+            key: `featured-${m.id}`,
+            id: m.id,
+            title: m.title || (m as any).name || "Untitled",
+            subtitle: subtitles[idx % subtitles.length],
+            backdrop_path: m.backdrop_path,
+            progress: progressVals[idx % progressVals.length],
+            remainingTime: remainingVals[idx % remainingVals.length],
+            type: "movie" as const,
+        }
+    })
+
+    const displayItems: ContinueWatchingItem[] =
+        realItems.length > 0 ? realItems : passedItems.length > 0 ? passedItems : fallbackItems
 
     if (displayItems.length === 0) return null
+
+    const watchHref = (item: ContinueWatchingItem) =>
+        item.type === "tv" && item.season && item.episode
+            ? `/watch/${item.id}?type=tv&season=${item.season}&episode=${item.episode}`
+            : `/watch/${item.id}?type=${item.type}`
 
     return (
         <section className="space-y-3.5" aria-label="Continue Watching">
@@ -67,15 +101,10 @@ export function ContinueWatching({ items, featuredMovies }: ContinueWatchingProp
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {displayItems.map((item) => {
-                    const watchHref =
-                        item.type === "tv" && item.season && item.episode
-                            ? `/watch/${item.id}?type=tv&season=${item.season}&episode=${item.episode}`
-                            : `/watch/${item.id}?type=${item.type}`
-
                     return (
                         <Link
-                            key={item.id}
-                            href={watchHref}
+                            key={item.key || `${item.type}-${item.id}`}
+                            href={watchHref(item)}
                             className="group relative block rounded-2xl overflow-hidden bg-[#101522] border border-white/[0.08] hover:border-[#9165FF]/40 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_25px_rgba(145,101,255,0.2)] transition-all duration-300"
                         >
                             {/* Landscape Thumbnail */}
