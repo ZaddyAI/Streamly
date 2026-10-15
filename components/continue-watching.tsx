@@ -1,12 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { PlayIcon, Clock } from "@/components/icons"
+import { PlayIcon, Clock, Film } from "@/components/icons"
 import { getBackdropUrl } from "@/lib/tmdb"
 import { SafeImage } from "@/components/safe-image"
 import { useContinueWatching } from "@/hooks/use-continue-watching"
 import { formatRemainingTime } from "@/lib/continue-watching"
-import type { Movie, TVShow } from "@/lib/tmdb"
 
 export interface ContinueWatchingItem {
     id: number
@@ -23,11 +22,10 @@ export interface ContinueWatchingItem {
 
 interface ContinueWatchingProps {
     items?: ContinueWatchingItem[]
-    featuredMovies?: Movie[]
 }
 
-export function ContinueWatching({ items, featuredMovies }: ContinueWatchingProps) {
-    const { items: savedEntries } = useContinueWatching()
+export function ContinueWatching({ items }: ContinueWatchingProps) {
+    const { items: savedEntries, loaded } = useContinueWatching()
 
     // 1. Real watch history saved on the watch page
     const realItems: ContinueWatchingItem[] = savedEntries.map((entry) => ({
@@ -46,40 +44,77 @@ export function ContinueWatching({ items, featuredMovies }: ContinueWatchingProp
         episode: entry.episode,
     }))
 
-    // 2. Explicitly passed items (e.g. stories/tests)
+    // 2. Explicitly passed items take over only when nothing is saved locally
     const passedItems: ContinueWatchingItem[] = (items || []).map((item) => ({
         ...item,
         key: item.key || `${item.type}-${item.id}`,
     }))
 
-    // 3. Fallback: generate realistic items from featured movies
-    const validMovies = (featuredMovies || []).filter((m): m is Movie => Boolean(m && m.id))
-    const fallbackItems: ContinueWatchingItem[] = validMovies.slice(0, 4).map((m, idx) => {
-        const progressVals = [68, 42, 85, 25]
-        const remainingVals = ["32m left", "48m left", "14m left", "1h 10m left"]
-        const subtitles = [
-            "Season 2 · Episode 4",
-            "4K Ultra HD",
-            "Season 1 · Episode 7",
-            "Cinematic Edition",
-        ]
-
-        return {
-            key: `featured-${m.id}`,
-            id: m.id,
-            title: m.title || (m as any).name || "Untitled",
-            subtitle: subtitles[idx % subtitles.length],
-            backdrop_path: m.backdrop_path,
-            progress: progressVals[idx % progressVals.length],
-            remainingTime: remainingVals[idx % remainingVals.length],
-            type: "movie" as const,
-        }
-    })
-
     const displayItems: ContinueWatchingItem[] =
-        realItems.length > 0 ? realItems : passedItems.length > 0 ? passedItems : fallbackItems
+        realItems.length > 0 ? realItems : passedItems
 
-    if (displayItems.length === 0) return null
+    // Avoid flashing the empty state before localStorage has been read
+    if (!loaded) {
+        return (
+            <section className="space-y-3.5" aria-label="Continue Watching" aria-busy="true">
+                <div className="flex items-center gap-2">
+                    <span className="text-[#9165FF] flex items-center">
+                        <Clock className="w-4 h-4" />
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-bold text-[#F7F7FC] tracking-tight">
+                        Continue Watching
+                    </h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[0, 1, 2, 3].map((i) => (
+                        <div
+                            key={i}
+                            className="rounded-2xl overflow-hidden bg-[#101522] border border-white/[0.08] animate-pulse"
+                        >
+                            <div className="aspect-video w-full bg-[#171C2C]" />
+                            <div className="h-1 bg-white/[0.05]" />
+                        </div>
+                    ))}
+                </div>
+            </section>
+        )
+    }
+
+    // Empty state: nothing watched yet — invite the user to start watching
+    if (displayItems.length === 0) {
+        return (
+            <section className="space-y-3.5" aria-label="Continue Watching">
+                <div className="flex items-center gap-2">
+                    <span className="text-[#9165FF] flex items-center">
+                        <Clock className="w-4 h-4" />
+                    </span>
+                    <h2 className="text-lg sm:text-xl font-bold text-[#F7F7FC] tracking-tight">
+                        Continue Watching
+                    </h2>
+                </div>
+                <Link
+                    href="/movies"
+                    className="group flex items-center gap-4 p-5 rounded-2xl bg-[#101522] border border-white/[0.08] hover:border-[#9165FF]/40 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_25px_rgba(145,101,255,0.2)] transition-all duration-300"
+                >
+                    <div className="w-12 h-12 rounded-full bg-[#9165FF]/20 border border-[#9165FF]/40 flex items-center justify-center text-[#B69AFF] shrink-0 group-hover:bg-[#9165FF]/30 transition-colors">
+                        <Film className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#F7F7FC] group-hover:text-[#B69AFF] transition-colors">
+                            Nothing here yet
+                        </p>
+                        <p className="text-xs text-[#929BB0] truncate">
+                            Start watching something and it&apos;ll show up here
+                        </p>
+                    </div>
+                    <span className="ml-auto shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#9165FF] text-white text-xs font-semibold shadow-[0_0_15px_rgba(145,101,255,0.4)] group-hover:shadow-[0_0_20px_rgba(145,101,255,0.6)] transition-all">
+                        <PlayIcon className="w-3 h-3 ml-0.5 fill-current" />
+                        Browse
+                    </span>
+                </Link>
+            </section>
+        )
+    }
 
     const watchHref = (item: ContinueWatchingItem) =>
         item.type === "tv" && item.season && item.episode

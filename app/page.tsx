@@ -67,7 +67,7 @@ export default async function HomePage() {
                     />
 
                     {/* 2. Continue Watching (Section 3.E) */}
-                    <ContinueWatching featuredMovies={popular.slice(0, 8)} />
+                    <ContinueWatching />
 
                     {/* 3. Popular Movies Row (Section 3.G) */}
                     <MovieRow
