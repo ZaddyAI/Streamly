@@ -158,10 +158,10 @@ export function Footer() {
                         </ul>
                     </div>
 
-                    {/* Column 4: Platform Ecosystem & Developer Info */}
+                    {/* Column 4: Platform Ecosystem*/}
                     <div className="space-y-4">
                         <h4 className="text-xs font-bold uppercase tracking-wider text-[#F7F7FC]">
-                            Ecosystem & Developer
+                            Ecosystem
                         </h4>
 
                         {/* GitHub & TMDB badges with prominent gap */}

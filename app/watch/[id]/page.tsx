@@ -100,6 +100,14 @@ const SERVERS: ServerConfig[] = [
         getURL: (type: string, id: string, season?: string, episode?: string) =>
             `https://player.smashy.stream/${type === "tv" ? "tv" : "movie"}/${id}${season && episode ? `?s=${season}&e=${episode}` : ""}`,
     },
+    {
+        id: 11,
+        name: "VidCore",
+        getURL: (type: string, id: string, season?: string, episode?: string) =>
+            type === "tv" && season && episode
+                ? `https://vidcore.org/embed/tv/${id}/${season}/${episode}?theme=9165FF`
+                : `https://vidcore.org/embed/movie/${id}?theme=9165FF`,
+    },
 ]
 
 export default function WatchPage() {
