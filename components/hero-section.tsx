@@ -130,7 +130,7 @@ export function HeroSection({ movies }: HeroSectionProps) {
                 <div className="flex items-center gap-3 pt-2">
                     {/* Watch Now Button */}
                     <Link
-                        href={`/watch/${movie.id}`}
+                        href={`/watch?id=${movie.id}`}
                         className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#9165FF] to-[#7B46F6] hover:from-[#A27BFF] hover:to-[#8E5AFF] text-white font-semibold text-sm shadow-[0_0_24px_rgba(145,101,255,0.4)] hover:shadow-[0_0_32px_rgba(145,101,255,0.6)] transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0"
                     >
                         <PlayIcon className="w-4 h-4 fill-current" />
@@ -158,7 +158,7 @@ export function HeroSection({ movies }: HeroSectionProps) {
 
                     {/* Movie Info Link */}
                     <Link
-                        href={`/movie/${movie.id}`}
+                        href={`/movie?id=${movie.id}`}
                         aria-label="View movie details"
                         className="p-3 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-[#F7F7FC] border border-white/[0.12] backdrop-blur-md transition-all duration-200"
                     >

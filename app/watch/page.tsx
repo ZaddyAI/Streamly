@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react"
 import {
     ArrowLeft,
     Server,
@@ -18,13 +18,14 @@ import {
     Layers,
 } from "@/components/icons"
 import Link from "next/link"
-import { useParams, useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getSeasonDetails, getTVShowDetails, getMovieDetails, getImageUrl } from "@/lib/tmdb"
 import type { Episode, TVShowDetails, Movie } from "@/lib/tmdb"
 import { cn } from "@/lib/utils"
 import { upsertContinueWatchingEntry } from "@/lib/continue-watching"
 import { SafeImage } from "@/components/safe-image"
+import WatchLoading from "./loading"
 
 interface ServerConfig {
     id: number
@@ -112,16 +113,26 @@ const SERVERS: ServerConfig[] = [
 ]
 
 export default function WatchPage() {
+    return (
+        <Suspense fallback={<WatchLoading />}>
+            <WatchContent />
+        </Suspense>
+    )
+}
+
+function WatchContent() {
     const router = useRouter()
-    const params = useParams()
     const searchParams = useSearchParams()
-    const id = params.id as string
+    const id = searchParams.get("id") ?? ""
+    const rawId = Number.parseInt(id, 10)
+    const isValidId = Number.isInteger(rawId) && rawId > 0
     const type = searchParams.get("type") || "movie"
 
     const [selectedServer, setSelectedServer] = useState<ServerConfig | null>(null)
     const [iframeKey, setIframeKey] = useState(0)
     const [availableServers, setAvailableServers] = useState<ServerConfig[]>([])
     const [checkingServers, setCheckingServers] = useState(true)
+    const [probing, setProbing] = useState(false)
 
     const [currentSeason, setCurrentSeason] = useState(searchParams.get("season") || "1")
     const [currentEpisode, setCurrentEpisode] = useState(searchParams.get("episode") || "1")
@@ -140,6 +151,14 @@ export default function WatchPage() {
     const [canScrollSeasonLeft, setCanScrollSeasonLeft] = useState(false)
     const [canScrollSeasonRight, setCanScrollSeasonRight] = useState(true)
 
+    // Best-effort reachability probe for a streaming source.
+    //
+    // This used to route through the server-side /api/proxy route so it could
+    // read the cross-origin status code. Static hosting has no server, and
+    // browsers hide cross-origin responses behind CORS — so we fire an opaque
+    // `no-cors` request instead. We can't read its status, but a request that
+    // rejects means the host never answered at all, which is enough to demote a
+    // genuinely dead source.
     const checkServerAvailability = async (server: ServerConfig): Promise<boolean> => {
         try {
             const testUrl = server.getURL(
@@ -149,76 +168,97 @@ export default function WatchPage() {
                 type === "tv" ? currentEpisode : undefined,
             )
 
-            const proxyUrl = `/api/proxy?url=${encodeURIComponent(testUrl)}`
-
-            const response = await fetch(proxyUrl, {
+            await fetch(testUrl, {
                 method: "HEAD",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                mode: "no-cors",
+                cache: "no-store",
             })
-
-            if (!response.ok) {
-                const getResponse = await fetch(proxyUrl, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                })
-                return getResponse.ok
-            }
-
-            return response.ok
-        } catch (error) {
-            console.error(`Error checking server ${server.name}:`, error)
+            return true
+        } catch {
             return false
         }
     }
 
-    // Check server availability
+    // Enable every source up front so playback starts immediately, then demote
+    // the ones that fail the reachability probe while the player is already up.
     useEffect(() => {
-        const checkAllServers = async () => {
-            setCheckingServers(true)
-            const checkedServers: ServerConfig[] = []
+        if (!isValidId) {
+            setAvailableServers([])
+            setSelectedServer(null)
+            setCheckingServers(false)
+            setProbing(false)
+            return
+        }
+
+        const optimistic: ServerConfig[] = SERVERS.map((server) => ({
+            ...server,
+            isAvailable: true,
+            isChecking: false,
+        }))
+        setAvailableServers(optimistic)
+        setSelectedServer((current) => optimistic.find((server) => server.id === current?.id) || optimistic[0])
+        setCheckingServers(false)
+        setProbing(true)
+
+        let cancelled = false
+
+        const probeAllServers = async () => {
+            const results: { server: ServerConfig; reachable: boolean }[] = []
             const batchSize = 3
-            const serverBatches = []
 
             for (let i = 0; i < SERVERS.length; i += batchSize) {
-                serverBatches.push(SERVERS.slice(i, i + batchSize))
-            }
-
-            for (const batch of serverBatches) {
-                const promises = batch.map(async (server) => {
-                    const isAvailable = await checkServerAvailability(server)
-                    return { ...server, isAvailable, isChecking: false }
-                })
-
-                const results = await Promise.allSettled(promises)
-                results.forEach((result) => {
-                    if (result.status === "fulfilled") {
-                        checkedServers.push(result.value)
-                    }
-                })
-
+                const batch = SERVERS.slice(i, i + batchSize)
+                const settled = await Promise.all(
+                    batch.map(async (server) => ({
+                        server,
+                        reachable: await checkServerAvailability(server),
+                    })),
+                )
+                results.push(...settled)
                 await new Promise((resolve) => setTimeout(resolve, 300))
+                if (cancelled) return
             }
 
-            const sortedServers = checkedServers.sort((a, b) => {
+            if (cancelled) return
+
+            // If nothing at all answered, the probe itself is being blocked
+            // (strict browser policy, an adblocker, no network) rather than
+            // every host being down — keep all sources enabled instead of
+            // hiding the lot.
+            const reachableCount = results.filter((result) => result.reachable).length
+            const probingWorked = reachableCount > 0
+
+            const probed: ServerConfig[] = results.map(({ server, reachable }) => ({
+                ...server,
+                isAvailable: probingWorked ? reachable : true,
+                isChecking: false,
+            }))
+
+            const sortedServers = [...probed].sort((a, b) => {
                 if (a.isAvailable === b.isAvailable) return a.id - b.id
                 return a.isAvailable ? -1 : 1
             })
 
             setAvailableServers(sortedServers)
-            const firstAvailable = sortedServers.find((server) => server.isAvailable) || sortedServers[0]
-            setSelectedServer(firstAvailable)
-            setCheckingServers(false)
+            setSelectedServer((current) => {
+                const stillAvailable =
+                    current && sortedServers.some((server) => server.id === current.id && server.isAvailable)
+                if (stillAvailable) return current
+                return sortedServers.find((server) => server.isAvailable) || sortedServers[0] || current
+            })
+            setProbing(false)
         }
 
-        checkAllServers()
-    }, [id, type, currentSeason, currentEpisode])
+        probeAllServers()
+
+        return () => {
+            cancelled = true
+        }
+    }, [id, isValidId, type])
 
     // Fetch media details (TV show or Movie)
     useEffect(() => {
+        if (!isValidId) return
         let cancelled = false
         const fetchData = async () => {
             setLoading(true)
@@ -293,7 +333,7 @@ export default function WatchPage() {
         if (hasPrevEpisode) {
             const prevEp = (currentEpNumber - 1).toString()
             setCurrentEpisode(prevEp)
-            router.push(`/watch/${id}?type=tv&season=${currentSeason}&episode=${prevEp}`)
+            router.push(`/watch?id=${id}&type=tv&season=${currentSeason}&episode=${prevEp}`)
         }
     }
 
@@ -301,7 +341,7 @@ export default function WatchPage() {
         if (hasNextEpisode) {
             const nextEp = (currentEpNumber + 1).toString()
             setCurrentEpisode(nextEp)
-            router.push(`/watch/${id}?type=tv&season=${currentSeason}&episode=${nextEp}`)
+            router.push(`/watch?id=${id}&type=tv&season=${currentSeason}&episode=${nextEp}`)
         }
     }
 
@@ -311,7 +351,7 @@ export default function WatchPage() {
         if (!isNaN(targetEp) && targetEp >= 1) {
             const epStr = targetEp.toString()
             setCurrentEpisode(epStr)
-            router.push(`/watch/${id}?type=tv&season=${currentSeason}&episode=${epStr}`)
+            router.push(`/watch?id=${id}&type=tv&season=${currentSeason}&episode=${epStr}`)
             setJumpInput("")
         }
     }
@@ -510,6 +550,30 @@ export default function WatchPage() {
     }, [])
 
 
+    if (!isValidId) {
+        return (
+            <div className="glass-card rounded-3xl p-10 sm:p-14 text-center space-y-5 max-w-xl mx-auto my-10">
+                <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center mx-auto text-[#929BB0]">
+                    {type === "tv" ? <Tv className="w-7 h-7" /> : <Film className="w-7 h-7" />}
+                </div>
+                <div className="space-y-2">
+                    <h1 className="text-2xl font-extrabold text-[#F7F7FC]">Nothing to play</h1>
+                    <p className="text-sm text-[#929BB0] leading-relaxed">
+                        This link doesn&apos;t point at a playable title. Head back to the catalogue and pick
+                        something to watch.
+                    </p>
+                </div>
+                <Link
+                    href="/"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#9165FF] to-[#7B46F6] text-white font-semibold text-sm shadow-[0_0_24px_rgba(145,101,255,0.4)] transition-all hover:-translate-y-0.5"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Back to Home</span>
+                </Link>
+            </div>
+        )
+    }
+
     return (
         <div className="flex flex-col flex-1 space-y-6">
             <div className="space-y-6 flex-1">
@@ -517,7 +581,7 @@ export default function WatchPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-[#101522] border border-white/[0.08]">
                     <div className="flex items-center gap-3.5 min-w-0">
                         <Link
-                            href={`/${type}/${id}`}
+                            href={`/${type}?id=${id}`}
                             className="inline-flex items-center gap-2 text-xs font-semibold text-[#929BB0] hover:text-[#F7F7FC] transition-colors bg-[#171C2C] border border-white/[0.08] hover:border-[#9165FF]/40 px-3 py-2 rounded-xl shrink-0"
                         >
                             <ArrowLeft className="w-3.5 h-3.5" />
@@ -710,7 +774,7 @@ export default function WatchPage() {
                                                             onClick={() => {
                                                                 setCurrentSeason(season.season_number.toString())
                                                                 setCurrentEpisode("1")
-                                                                router.push(`/watch/${id}?type=tv&season=${season.season_number}&episode=1`)
+                                                                router.push(`/watch?id=${id}&type=tv&season=${season.season_number}&episode=1`)
                                                             }}
                                                             className={cn(
                                                                 "flex-none px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all",
@@ -746,7 +810,7 @@ export default function WatchPage() {
                                                         onClick={() => {
                                                             setCurrentSeason(season.season_number.toString())
                                                             setCurrentEpisode("1")
-                                                            router.push(`/watch/${id}?type=tv&season=${season.season_number}&episode=1`)
+                                                            router.push(`/watch?id=${id}&type=tv&season=${season.season_number}&episode=1`)
                                                         }}
                                                         className={cn(
                                                             "px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all",
@@ -773,7 +837,7 @@ export default function WatchPage() {
                                         onValueChange={(val) => {
                                             setCurrentSeason(val)
                                             setCurrentEpisode("1")
-                                            router.push(`/watch/${id}?type=tv&season=${val}&episode=1`)
+                                            router.push(`/watch?id=${id}&type=tv&season=${val}&episode=1`)
                                         }}
                                     >
                                         <SelectTrigger className="w-full bg-[#171C2C] border-white/[0.08] text-white rounded-xl h-10">
@@ -800,7 +864,7 @@ export default function WatchPage() {
                                         value={currentEpisode}
                                         onValueChange={(val) => {
                                             setCurrentEpisode(val)
-                                            router.push(`/watch/${id}?type=tv&season=${currentSeason}&episode=${val}`)
+                                            router.push(`/watch?id=${id}&type=tv&season=${currentSeason}&episode=${val}`)
                                         }}
                                     >
                                         <SelectTrigger className="w-full bg-[#171C2C] border-white/[0.08] text-white rounded-xl h-10">
@@ -855,7 +919,7 @@ export default function WatchPage() {
                             <div className="flex items-center gap-2 text-sm font-bold text-[#F7F7FC]">
                                 <Monitor className="h-4 w-4 text-[#9165FF]" />
                                 <span>Streaming Sources</span>
-                                {checkingServers && (
+                                {probing && (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin text-[#929BB0]" />
                                 )}
                             </div>

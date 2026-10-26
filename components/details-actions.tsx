@@ -43,9 +43,9 @@ export function DetailsActions({
     const watchUrl =
         type === "tv"
             ? canResume && resumeEntry?.season && resumeEntry?.episode
-                ? `/watch/${id}?type=tv&season=${resumeEntry.season}&episode=${resumeEntry.episode}`
-                : `/watch/${id}?type=tv&season=${firstSeasonNumber}&episode=1`
-            : `/watch/${id}`
+                ? `/watch?id=${id}&type=tv&season=${resumeEntry.season}&episode=${resumeEntry.episode}`
+                : `/watch?id=${id}&type=tv&season=${firstSeasonNumber}&episode=1`
+            : `/watch?id=${id}`
 
     const watchLabel =
         canResume && resumeEntry?.season && resumeEntry?.episode

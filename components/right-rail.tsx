@@ -89,7 +89,7 @@ export function RightRail({ topRated }: RightRailProps) {
                         return (
                             <Link
                                 key={item.id}
-                                href={`/${isTV ? "tv" : "movie"}/${item.id}`}
+                                href={`/${isTV ? "tv" : "movie"}?id=${item.id}`}
                                 className="group flex items-center gap-3 p-1.5 rounded-xl hover:bg-[#171C2C] transition-colors"
                             >
                                 {/* Rank Number */}

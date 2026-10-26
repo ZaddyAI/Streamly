@@ -1,0 +1,44 @@
+# Streamly — static export (.htaccess)
+#
+# Next.js emits each extensionless route as a flat file (`/movies` becomes
+# `movies.html`), and Apache will not serve those URLs without a rewrite. This
+# file does three things:
+#
+#   1. Redirects the old path-parameter detail URLs onto the query-parameter
+#      form that static hosting can serve (/movie/550 -> /movie?id=550).
+#   2. Normalises trailing slashes.
+#   3. Maps extensionless routes onto their exported .html file.
+#
+# Requires mod_rewrite, which is standard on cPanel, Hostinger and LiteSpeed.
+# Next.js emits absolute `/_next/...` asset URLs, so this site must be deployed
+# to the web root (e.g. public_html), not into a subdirectory.
+
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Legacy detail URLs -> query-parameter form (external, so the address
+    #    bar updates and client-side code can read the `id` search param).
+    RewriteRule ^movie/([0-9]+)/?$ /movie?id=$1 [R=301,L,QSA]
+    RewriteRule ^tv/([0-9]+)/?$    /tv?id=$1    [R=301,L,QSA]
+    RewriteRule ^watch/([0-9]+)/?$ /watch?id=$1 [R=301,L,QSA]
+
+    # 2. Drop a trailing slash, otherwise the rule below would produce
+    #    `dir/.html`. The root path is left alone so it hits DirectoryIndex.
+    RewriteCond %{REQUEST_URI} !^/$
+    RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+    # 3. Extensionless route -> exported .html file. Deliberately internal (no
+    #    redirect flag) so the clean URL stays in the address bar while Apache
+    #    serves the flat file. Existing files and directories are skipped, and
+    #    anything that already has an extension is skipped too, so a missing
+    #    page 404s instead of looping into `.html.html`.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !\.[a-zA-Z0-9]+$
+    RewriteRule ^(.*)$ $1.html [L]
+</IfModule>
+
+# Unknown routes render the exported Not Found page.
+ErrorDocument 404 /404.html

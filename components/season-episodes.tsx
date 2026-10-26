@@ -498,7 +498,7 @@ export function SeasonEpisodes({ tvId, seasons, totalSeasonsCount }: SeasonEpiso
                 {/* Quick Premiere Button */}
                 {episodes.length > 0 && (
                     <Link
-                        href={`/watch/${tvId}?type=tv&season=${activeSeason}&episode=${episodes[0]?.episode_number || 1}`}
+                        href={`/watch?id=${tvId}&type=tv&season=${activeSeason}&episode=${episodes[0]?.episode_number || 1}`}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#9165FF] to-[#7B46F6] hover:from-[#A27BFF] hover:to-[#8E5AFF] text-white text-xs font-semibold shadow-[0_0_15px_rgba(145,101,255,0.35)] transition-all shrink-0"
                     >
                         <PlayIcon className="w-3.5 h-3.5 fill-current" />
@@ -590,7 +590,7 @@ export function SeasonEpisodes({ tvId, seasons, totalSeasonsCount }: SeasonEpiso
                                 return (
                                     <Link
                                         key={episode.id}
-                                        href={`/watch/${tvId}?type=tv&season=${activeSeason}&episode=${episode.episode_number}`}
+                                        href={`/watch?id=${tvId}&type=tv&season=${activeSeason}&episode=${episode.episode_number}`}
                                         className="group flex flex-col sm:flex-row gap-4 p-3 sm:p-3.5 rounded-2xl bg-[#101522] border border-white/[0.08] hover:border-[#9165FF]/50 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_25px_rgba(145,101,255,0.18)] hover:-translate-y-0.5 transition-all duration-300"
                                     >
                                         {/* Still Thumbnail with Streamly Logo Fallback */}
@@ -677,7 +677,7 @@ export function SeasonEpisodes({ tvId, seasons, totalSeasonsCount }: SeasonEpiso
                                 return (
                                     <Link
                                         key={episode.id}
-                                        href={`/watch/${tvId}?type=tv&season=${activeSeason}&episode=${episode.episode_number}`}
+                                        href={`/watch?id=${tvId}&type=tv&season=${activeSeason}&episode=${episode.episode_number}`}
                                         title={`Ep ${episode.episode_number}: ${episode.name}`}
                                         className="group relative flex flex-col items-center justify-center p-3 rounded-xl bg-[#101522] border border-white/[0.08] hover:border-[#9165FF]/60 hover:bg-[#171C2C] shadow-sm hover:shadow-[0_0_15px_rgba(145,101,255,0.25)] transition-all duration-200"
                                     >

@@ -153,7 +153,7 @@ function SearchBar({ className }: { className?: string }) {
         const isTV = "name" in item
         setShowSuggestions(false)
         setSearchQuery("")
-        router.push(`/${isTV ? "tv" : "movie"}/${item.id}`)
+        router.push(`/${isTV ? "tv" : "movie"}?id=${item.id}`)
     }
 
     return (

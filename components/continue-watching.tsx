@@ -118,8 +118,8 @@ export function ContinueWatching({ items }: ContinueWatchingProps) {
 
     const watchHref = (item: ContinueWatchingItem) =>
         item.type === "tv" && item.season && item.episode
-            ? `/watch/${item.id}?type=tv&season=${item.season}&episode=${item.episode}`
-            : `/watch/${item.id}?type=${item.type}`
+            ? `/watch?id=${item.id}&type=tv&season=${item.season}&episode=${item.episode}`
+            : `/watch?id=${item.id}&type=${item.type}`
 
     return (
         <section className="space-y-3.5" aria-label="Continue Watching">

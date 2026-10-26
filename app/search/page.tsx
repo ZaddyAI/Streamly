@@ -1,13 +1,12 @@
+"use client"
+
+import { Suspense, useEffect, useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { searchMulti } from "@/lib/tmdb"
 import { MovieCard } from "@/components/movie-card"
 import { Search, Compass } from "@/components/icons"
-import Link from "next/link"
-
-interface SearchPageProps {
-    searchParams: Promise<{
-        q?: string
-    }>
-}
+import SearchLoading from "./loading"
 
 const POPULAR_GENRES = [
     { name: "Action", id: 28 },
@@ -20,17 +19,39 @@ const POPULAR_GENRES = [
     { name: "Adventure", id: 12 },
 ]
 
-export default async function SearchPage({ searchParams }: SearchPageProps) {
-    const { q: query } = await searchParams
-    let results: any[] = []
+function SearchContent() {
+    const searchParams = useSearchParams()
+    const query = (searchParams.get("q") ?? "").trim()
 
-    if (query && query.trim()) {
-        try {
-            results = await searchMulti(query.trim())
-        } catch (e) {
-            console.error("Search multi failed", e)
+    const [results, setResults] = useState<any[]>([])
+    const [searching, setSearching] = useState(false)
+
+    useEffect(() => {
+        if (!query) {
+            setResults([])
+            setSearching(false)
+            return
         }
-    }
+
+        let cancelled = false
+        setSearching(true)
+
+        ;(async () => {
+            try {
+                const data = await searchMulti(query)
+                if (!cancelled) setResults(data || [])
+            } catch (e) {
+                console.error("Search multi failed", e)
+                if (!cancelled) setResults([])
+            } finally {
+                if (!cancelled) setSearching(false)
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [query])
 
     return (
         <div className="space-y-8 md:space-y-10">
@@ -50,9 +71,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     )}
                 </h1>
                 <p className="text-sm text-[#929BB0]">
-                    {query
-                        ? `Found ${results.length} ${results.length === 1 ? "match" : "matches"} across movies and television series.`
-                        : "Search through thousands of films, series, actors, and directors."}
+                    {!query || searching
+                        ? "Search through thousands of films, series, actors, and directors."
+                        : `Found ${results.length} ${results.length === 1 ? "match" : "matches"} across movies and television series.`}
                 </p>
             </div>
 
@@ -87,11 +108,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                         </div>
                     </div>
                 </div>
+            ) : searching ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i} className="aspect-[2/3] bg-white/5 animate-pulse rounded-2xl" />
+                    ))}
+                </div>
             ) : results.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
                     {results.map((item: any) => (
                         <MovieCard
-                            key={item.id}
+                            key={`${item.media_type || "item"}-${item.id}`}
                             movie={{
                                 ...item,
                                 title: item.title || item.name,
@@ -113,5 +140,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function SearchPage() {
+    return (
+        <Suspense fallback={<SearchLoading />}>
+            <SearchContent />
+        </Suspense>
     )
 }

@@ -1,45 +1,98 @@
+"use client"
+
+import { Suspense, useEffect, useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { getMovieDetails, getSimilarMovies, getBackdropUrl, getImageUrl, getMovieVideos } from "@/lib/tmdb"
 import { SafeImage } from "@/components/safe-image"
 import { Star, Clock, ArrowLeft, Film } from "@/components/icons"
-import Link from "next/link"
 import { MovieRow } from "@/components/movie-row"
-import { notFound } from "next/navigation"
 import { DetailsActions } from "@/components/details-actions"
+import MovieLoading from "./loading"
 
-interface MoviePageProps {
-    params: Promise<{
-        id: string
-    }>
+function TitleMissing({ backHref, backLabel }: { backHref: string; backLabel: string }) {
+    return (
+        <div className="glass-card rounded-3xl p-10 sm:p-14 text-center space-y-5 max-w-xl mx-auto my-10">
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center mx-auto text-[#929BB0]">
+                <Film className="w-7 h-7" />
+            </div>
+            <div className="space-y-2">
+                <h1 className="text-2xl font-extrabold text-[#F7F7FC]">Title not found</h1>
+                <p className="text-sm text-[#929BB0] leading-relaxed">
+                    We couldn&apos;t load this title. The link may be broken, or the title is no longer available in
+                    the catalogue.
+                </p>
+            </div>
+            <Link
+                href={backHref}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#9165FF] to-[#7B46F6] text-white font-semibold text-sm shadow-[0_0_24px_rgba(145,101,255,0.4)] transition-all hover:-translate-y-0.5"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{backLabel}</span>
+            </Link>
+        </div>
+    )
 }
 
-export default async function MoviePage({ params }: MoviePageProps) {
-    const { id } = await params
-    const movieId = Number.parseInt(id)
+function MovieContent() {
+    const searchParams = useSearchParams()
+    const rawId = searchParams.get("id") ?? ""
+    const movieId = Number.parseInt(rawId, 10)
+    const isValidId = Number.isInteger(movieId) && movieId > 0
 
-    if (isNaN(movieId)) {
-        notFound()
+    const [movie, setMovie] = useState<any>(null)
+    const [similarMovies, setSimilarMovies] = useState<any[]>([])
+    const [videos, setVideos] = useState<any[]>([])
+    const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading")
+
+    useEffect(() => {
+        if (!isValidId) {
+            setMovie(null)
+            setStatus("missing")
+            return
+        }
+
+        let cancelled = false
+        setStatus("loading")
+        setMovie(null)
+        setSimilarMovies([])
+        setVideos([])
+
+        ;(async () => {
+            try {
+                const [movieData, similarData, videosData] = await Promise.all([
+                    getMovieDetails(movieId),
+                    getSimilarMovies(movieId),
+                    getMovieVideos(movieId),
+                ])
+                if (cancelled) return
+                setMovie(movieData)
+                setSimilarMovies(similarData || [])
+                setVideos(videosData || [])
+                setStatus("ready")
+            } catch (e) {
+                console.error("Failed to load movie details", e)
+                if (!cancelled) setStatus("missing")
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [movieId, isValidId])
+
+    if (status === "missing") {
+        return <TitleMissing backHref="/movies" backLabel="Back to Movies" />
     }
 
-    let movie: any = null
-    let similarMovies: any[] = []
-    let videos: any[] = []
-
-    try {
-        const [movieData, similarData, videosData] = await Promise.all([
-            getMovieDetails(movieId),
-            getSimilarMovies(movieId),
-            getMovieVideos(movieId),
-        ])
-        movie = movieData
-        similarMovies = similarData || []
-        videos = videosData || []
-    } catch (e) {
-        console.error("Failed to load movie details", e)
-        notFound()
+    if (status === "loading" || !movie) {
+        return <MovieLoading />
     }
 
     const trailer =
-        videos.find((v) => v.type === "Trailer" && v.official) || videos.find((v) => v.type === "Trailer") || videos[0]
+        videos.find((v: any) => v.type === "Trailer" && v.official) ||
+        videos.find((v: any) => v.type === "Trailer") ||
+        videos[0]
 
     const releaseYear = movie.release_date ? new Date(movie.release_date).getFullYear() : null
 
@@ -106,7 +159,7 @@ export default async function MoviePage({ params }: MoviePageProps) {
                                 </span>
                             )}
                             {movie.runtime > 0 && (
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] border border-white/[0.08] text-[#F7F7FC]">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] border border-white/[0.08] text-[#B69AFF]">
                                     <Clock className="w-3.5 h-3.5 text-[#B69AFF]" />
                                     <span>{movie.runtime} min</span>
                                 </span>
@@ -177,5 +230,13 @@ export default async function MoviePage({ params }: MoviePageProps) {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function MoviePage() {
+    return (
+        <Suspense fallback={<MovieLoading />}>
+            <MovieContent />
+        </Suspense>
     )
 }

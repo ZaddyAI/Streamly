@@ -1,7 +1,11 @@
-import { getMoviesByGenre, getMovieGenres } from "@/lib/tmdb"
+"use client"
+
+import { Suspense, useEffect, useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { getMoviesByGenre } from "@/lib/tmdb"
 import { MovieCard } from "@/components/movie-card"
 import { Compass } from "@/components/icons"
-import Link from "next/link"
 
 const ALL_GENRES = [
     { id: 28, name: "Action" },
@@ -20,24 +24,61 @@ const ALL_GENRES = [
     { id: 53, name: "Thriller" },
 ]
 
-interface GenresPageProps {
-    searchParams: Promise<{
-        id?: string
-        name?: string
-    }>
+function GenresLoading() {
+    return (
+        <div className="space-y-8 md:space-y-10">
+            <div className="space-y-2">
+                <div className="h-5 w-40 bg-brand-accent/20 animate-pulse rounded-full" />
+                <div className="h-10 w-64 bg-white/5 animate-pulse rounded-xl" />
+                <div className="h-4 w-72 bg-white/5 animate-pulse rounded-full" />
+            </div>
+
+            <div className="flex gap-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-9 w-24 bg-white/5 animate-pulse rounded-2xl" />
+                ))}
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} className="aspect-[2/3] bg-white/5 animate-pulse rounded-2xl" />
+                ))}
+            </div>
+        </div>
+    )
 }
 
-export default async function GenresPage({ searchParams }: GenresPageProps) {
-    const params = await searchParams
-    const selectedId = params.id ? parseInt(params.id, 10) : ALL_GENRES[0].id
+function GenresContent() {
+    const searchParams = useSearchParams()
+    const rawId = searchParams.get("id")
+    const parsedId = rawId ? Number.parseInt(rawId, 10) : Number.NaN
+    const selectedId = Number.isInteger(parsedId) ? parsedId : ALL_GENRES[0].id
     const selectedGenre = ALL_GENRES.find((g) => g.id === selectedId) || ALL_GENRES[0]
 
-    let movies: any[] = []
-    try {
-        movies = await getMoviesByGenre(selectedGenre.id)
-    } catch (e) {
-        console.error("Failed to fetch movies by genre", e)
-    }
+    const [movies, setMovies] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        let cancelled = false
+        setLoading(true)
+        setMovies([])
+
+        ;(async () => {
+            try {
+                const data = await getMoviesByGenre(selectedGenre.id)
+                if (!cancelled) setMovies(data || [])
+            } catch (e) {
+                console.error("Failed to fetch movies by genre", e)
+                if (!cancelled) setMovies([])
+            } finally {
+                if (!cancelled) setLoading(false)
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [selectedGenre.id])
 
     return (
         <div className="space-y-8 md:space-y-10">
@@ -80,12 +121,18 @@ export default async function GenresPage({ searchParams }: GenresPageProps) {
                     Top {selectedGenre.name} Titles
                 </h2>
                 <span className="text-xs text-[#929BB0]">
-                    {movies.length} titles available
+                    {loading ? "Loading…" : `${movies.length} titles available`}
                 </span>
             </div>
 
             {/* Movies Grid */}
-            {movies.length > 0 ? (
+            {loading ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i} className="aspect-[2/3] bg-white/5 animate-pulse rounded-2xl" />
+                    ))}
+                </div>
+            ) : movies.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 sm:gap-5">
                     {movies.map((movie) => (
                         <MovieCard key={movie.id} movie={movie} type="movie" />
@@ -97,5 +144,13 @@ export default async function GenresPage({ searchParams }: GenresPageProps) {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function GenresPage() {
+    return (
+        <Suspense fallback={<GenresLoading />}>
+            <GenresContent />
+        </Suspense>
     )
 }

@@ -19,8 +19,13 @@ function GitHubStats() {
 
     useEffect(() => {
         let active = true
-        fetch("/api/github-stats")
-            .then((r) => r.json())
+
+        // Counts are fetched with GITHUB_TOKEN during `npm run build` (see
+        // scripts/fetch-github-stats.mjs) and written to this static file, so
+        // the token never reaches the browser. The pill hides itself if the
+        // file is missing or the counts failed to build.
+        fetch("/github-stats.json")
+            .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`GitHub responded ${r.status}`))))
             .then((data) => {
                 if (!active) return
                 setStats({

@@ -1,46 +1,99 @@
+"use client"
+
+import { Suspense, useEffect, useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { getTVShowDetails, getSimilarTVShows, getBackdropUrl, getImageUrl, getTVShowVideos } from "@/lib/tmdb"
 import { SafeImage } from "@/components/safe-image"
 import { Star, Calendar, ArrowLeft, Tv } from "@/components/icons"
-import Link from "next/link"
 import { MovieRow } from "@/components/movie-row"
-import { notFound } from "next/navigation"
 import { DetailsActions } from "@/components/details-actions"
 import { SeasonEpisodes } from "@/components/season-episodes"
+import TVShowLoading from "./loading"
 
-interface TVShowPageProps {
-    params: Promise<{
-        id: string
-    }>
+function TitleMissing({ backHref, backLabel }: { backHref: string; backLabel: string }) {
+    return (
+        <div className="glass-card rounded-3xl p-10 sm:p-14 text-center space-y-5 max-w-xl mx-auto my-10">
+            <div className="w-14 h-14 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center mx-auto text-[#929BB0]">
+                <Tv className="w-7 h-7" />
+            </div>
+            <div className="space-y-2">
+                <h1 className="text-2xl font-extrabold text-[#F7F7FC]">Series not found</h1>
+                <p className="text-sm text-[#929BB0] leading-relaxed">
+                    We couldn&apos;t load this series. The link may be broken, or the title is no longer available in
+                    the catalogue.
+                </p>
+            </div>
+            <Link
+                href={backHref}
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#9165FF] to-[#7B46F6] text-white font-semibold text-sm shadow-[0_0_24px_rgba(145,101,255,0.4)] transition-all hover:-translate-y-0.5"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                <span>{backLabel}</span>
+            </Link>
+        </div>
+    )
 }
 
-export default async function TVShowPage({ params }: TVShowPageProps) {
-    const { id } = await params
-    const tvId = Number.parseInt(id)
+function TVShowContent() {
+    const searchParams = useSearchParams()
+    const rawId = searchParams.get("id") ?? ""
+    const tvId = Number.parseInt(rawId, 10)
+    const isValidId = Number.isInteger(tvId) && tvId > 0
 
-    if (isNaN(tvId)) {
-        notFound()
+    const [tvShow, setTVShow] = useState<any>(null)
+    const [similarShows, setSimilarShows] = useState<any[]>([])
+    const [videos, setVideos] = useState<any[]>([])
+    const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading")
+
+    useEffect(() => {
+        if (!isValidId) {
+            setTVShow(null)
+            setStatus("missing")
+            return
+        }
+
+        let cancelled = false
+        setStatus("loading")
+        setTVShow(null)
+        setSimilarShows([])
+        setVideos([])
+
+        ;(async () => {
+            try {
+                const [tvData, similarData, videosData] = await Promise.all([
+                    getTVShowDetails(tvId),
+                    getSimilarTVShows(tvId),
+                    getTVShowVideos(tvId),
+                ])
+                if (cancelled) return
+                setTVShow(tvData)
+                setSimilarShows(similarData || [])
+                setVideos(videosData || [])
+                setStatus("ready")
+            } catch (e) {
+                console.error("Failed to load TV show details", e)
+                if (!cancelled) setStatus("missing")
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [tvId, isValidId])
+
+    if (status === "missing") {
+        return <TitleMissing backHref="/tv-shows" backLabel="Back to TV Shows" />
     }
 
-    let tvShow: any = null
-    let similarShows: any[] = []
-    let videos: any[] = []
-
-    try {
-        const [tvData, similarData, videosData] = await Promise.all([
-            getTVShowDetails(tvId),
-            getSimilarTVShows(tvId),
-            getTVShowVideos(tvId),
-        ])
-        tvShow = tvData
-        similarShows = similarData || []
-        videos = videosData || []
-    } catch (e) {
-        console.error("Failed to load TV show details", e)
-        notFound()
+    if (status === "loading" || !tvShow) {
+        return <TVShowLoading />
     }
 
     const trailer =
-        videos.find((v) => v.type === "Trailer" && v.official) || videos.find((v) => v.type === "Trailer") || videos[0]
+        videos.find((v: any) => v.type === "Trailer" && v.official) ||
+        videos.find((v: any) => v.type === "Trailer") ||
+        videos[0]
 
     const releaseYear = tvShow.first_air_date ? new Date(tvShow.first_air_date).getFullYear() : null
     const firstSeason = tvShow.seasons.find((s: any) => s.season_number > 0) || tvShow.seasons[0]
@@ -107,7 +160,7 @@ export default async function TVShowPage({ params }: TVShowPageProps) {
                                     {releaseYear}
                                 </span>
                             )}
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] border border-white/[0.08] text-[#F7F7FC]">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/[0.08] border border-white/[0.08] text-[#B69AFF]">
                                 <Calendar className="w-3.5 h-3.5 text-[#B69AFF]" />
                                 <span>{tvShow.number_of_seasons} Seasons</span>
                             </span>
@@ -195,5 +248,13 @@ export default async function TVShowPage({ params }: TVShowPageProps) {
                 </div>
             )}
         </div>
+    )
+}
+
+export default function TVShowPage() {
+    return (
+        <Suspense fallback={<TVShowLoading />}>
+            <TVShowContent />
+        </Suspense>
     )
 }

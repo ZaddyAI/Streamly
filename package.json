@@ -4,8 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/fetch-github-stats.mjs",
     "build": "next build",
-    "start": "next start"
+    "postbuild": "node scripts/copy-build.mjs",
+    "start": "npx --yes serve build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

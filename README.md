@@ -64,7 +64,7 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_TMDB_API_KEY` | **Yes** | Your TMDB API v3 key. Drives all catalog data. |
 | `NEXT_PUBLIC_TMDB_BASE_URL` | Yes | TMDB API base URL — `https://api.themoviedb.org/3` |
 | `NEXT_PUBLIC_TMDB_IMAGE_URL` | Yes | TMDB image base URL — `https://image.tmdb.org/t/p/original` |
-| `GITHUB_TOKEN` | No | Personal access token used by `/api/github-stats` to show live star and fork counts in the footer. If omitted, the stats pill hides itself gracefully. |
+| `GITHUB_TOKEN` | No | Read by `scripts/fetch-github-stats.mjs` during `npm run build`, which writes `public/github-stats.json` (the footer's star/fork counts). It is used on your own machine only and is never shipped to the browser. Omit it and the star pill just hides itself. |
 
 ### 3. Run the dev server
 
@@ -78,8 +78,44 @@ The app starts on [http://localhost:3000](http://localhost:3000) (falling back t
 
 ```bash
 npm run build
+```
+
+That one command runs three steps:
+
+| Phase | Script | What it does |
+| --- | --- | --- |
+| `prebuild` | `scripts/fetch-github-stats.mjs` | Calls GitHub with `GITHUB_TOKEN` and writes `public/github-stats.json` (the footer's star/fork counts) |
+| `build` | `next build` | Static export (`output: "export"`) into `out/` |
+| `postbuild` | `scripts/copy-build.mjs` | Copies `out/` into **`build/`**, the deployable artifact |
+
+> **Dev and build can run side by side.** They used to fight over `.next/` and corrupt each other. Dev now writes to `.next-dev` while the production build keeps the conventional `.next` (see `distDir` in `next.config.mjs`), so a running dev server — including one your IDE keeps alive — no longer breaks builds.
+
+Preview what will actually ship with:
+
+```bash
 npm start
 ```
+
+### Deploying to shared hosting (cPanel / Hostinger / Apache)
+
+1. Run `npm run build`.
+2. Upload the **contents** of `build/` (not the folder itself) into your web root — typically `public_html/`.
+3. Confirm `build/.htaccess` came along. Most FTP clients hide dotfiles, so enable "show hidden files".
+
+The `.htaccess` is required, not optional. Next.js exports `/movies` as a flat `movies.html`, which Apache will not serve at an extensionless URL without a rewrite. It also 301-redirects the old `/movie/550` links onto `/movie?id=550`.
+
+Because Next.js emits absolute `/_next/...` asset URLs, deploy to the **domain root**, not a subdirectory.
+
+#### What changed for static hosting
+
+Two features previously needed a server at runtime:
+
+| Removed route | Static replacement |
+| --- | --- |
+| `/api/proxy` | Availability is probed from the browser with an opaque `no-cors` request. All 10 servers appear immediately and unreachable ones are demoted afterwards — if nothing answers at all (adblocker, offline, strict CORS) every server stays enabled rather than hiding the lot. |
+| `/api/github-stats` | Counted at build time. A `prebuild` step calls GitHub with `GITHUB_TOKEN` and writes `public/github-stats.json`, which the footer serves as a plain static file — so there is no rate limit and the token never reaches the browser. Counts refresh on every `npm run build`. |
+
+Detail pages also moved from path segments to query parameters — `/movie/550` is now `/movie?id=550` — because a static host cannot render a movie it did not prerender at build time.
 
 ## Project Structure
 
@@ -90,20 +126,24 @@ app/
   trending/  genres/        Discovery pages
   search/                   Search with live suggestions
   my-list/                  Local-storage watchlist
-  movie/[id]/               Movie details
-  tv/[id]/                  TV details + season/episode browser
-  watch/[id]/               Player with server selection
+  movie/                    Movie details (?id=…)
+  tv/                       TV details + season/episode browser (?id=…)
+  watch/                    Player with server selection (?id=…)
   privacy-policy/           Legal pages
   cookies-policy/
-  api/github-stats/         Live GitHub star & fork counts
-  api/proxy/                Availability probe for embed servers
 components/                 UI components (see below)
 hooks/                      use-watchlist, use-mobile, use-toast
 lib/
   tmdb.ts                   Typed TMDB client + image helpers
   constants.ts              Nav links, developer info
   utils.ts                  `cn()` class helper
-public/                     Favicon and static assets
+scripts/
+  fetch-github-stats.mjs    prebuild — GitHub star/fork counts -> public/github-stats.json
+  copy-build.mjs            postbuild — copies the static export into build/
+public/
+  .htaccess                 Apache rewrites — required for the static export
+  github-stats.json         Written at build time (gitignored)
+  *.svg                     Favicon and placeholder assets
 screenshots/                README screenshots
 ```
 
@@ -131,14 +171,14 @@ screenshots/                README screenshots
 | `/genres` | Browse and filter movies by genre |
 | `/search` | Search across movies and TV |
 | `/my-list` | Your saved watchlist |
-| `/movie/[id]` | Movie details, trailer, and similar titles |
-| `/tv/[id]` | TV details with season and episode browser |
-| `/watch/[id]` | Player — pick one of 10 streaming servers |
+| `/movie?id=…` | Movie details, trailer, and similar titles |
+| `/tv?id=…` | TV details with season and episode browser |
+| `/watch?id=…` | Player — pick one of 10 streaming servers |
 
 ## How It Works
 
 1. **Search for Content** — Use the search bar to find movies and TV series by title, with live suggestions as you type.
-2. **Select a Server** — Choose from a list of available servers to start watching your selected content. Streamly checks availability in the background so only working servers are offered.
+2. **Select a Server** — Choose from a list of available servers to start watching your selected content. Streamly probes each source in the background and marks the ones that don't answer as offline.
 3. **Enjoy Ad-Free Viewing** — Stream your favorite movies and TV shows without any interruptions.
 
 ## Disclaimer

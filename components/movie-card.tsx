@@ -40,7 +40,7 @@ export function MovieCard({ movie, type = "movie", priority = false }: MovieCard
     return (
         <div className="group relative block rounded-2xl overflow-hidden bg-[#101522] border border-white/[0.08] hover:border-[#9165FF]/40 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_30px_rgba(145,101,255,0.15)] transition-all duration-300">
             <Link
-                href={`/${isTV ? "tv" : "movie"}/${movie.id}`}
+                href={`/${isTV ? "tv" : "movie"}?id=${movie.id}`}
                 className="block relative aspect-[2/3] w-full overflow-hidden"
                 aria-label={title}
             >
